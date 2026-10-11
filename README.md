@@ -12,6 +12,14 @@ https://github.com/user-attachments/assets/220cc47a-0e78-4e60-8cf7-514f8f043d63
 
 Open-source bounty platforms take a 10–20% cut, pay out days later through card rails that don't reach half the world, and are now flooded with bait listings whose money never existed. BountyBoard makes the money provable up front (it sits in escrow, visible on-chain) and the payout automatic (the maintainer's merge is the only approval).
 
+## Business
+
+- **Who pays:** open-source companies and DAOs that already fund bounties (Algora, Opire, Superteam Earn, Gitcoin grants) — plus any maintainer with a backlog and a wallet.
+- **Revenue:** a 2% fee taken at payout (vs. 10–20% on today's platforms), charged only when work is merged — the maintainer never pays for an unclaimed bounty. Later: a hosted GitHub App with private-repo support and team budgets as a subscription.
+- **Why it wins:** funds are provably escrowed before anyone starts work (no bait bounties), payout is instant and global (a Solana wallet works anywhere a bank or Stripe doesn't), and there's no account to make — a GitHub PR and a wallet address are the whole onboarding.
+- **For Solana:** every bounty brings a developer to their first wallet and first USDC on Solana, paid for real work.
+- **Next:** an Anchor escrow program (one PDA per bounty, no custody), a GitHub App + webhook instead of polling, split payouts for co-authored PRs, and refunds on expiry.
+
 ## How it works
 
 1. **Fund** — the maintainer posts `owner/repo#issue` + amount. BountyBoard returns a [Solana Pay](https://docs.solanapay.com) transfer request (QR / wallet link) with a unique `reference` key. Any Solana wallet pays it.
