@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BountyBoard Pitch</title>
+<style>
+  :root { --bg:#0b0d12; --card:#151924; --line:#262c3b; --text:#e8ebf2; --muted:#8a93a6; --accent:#14f195; --violet:#9945ff; --warn:#f5b84b; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font:20px/1.45 system-ui, -apple-system, sans-serif; }
+  .slide { display:none; height:100vh; padding:6vh 8vw; flex-direction:column; justify-content:center; gap:3vh; }
+  .slide.on { display:flex; }
+  h1 { font-size:64px; margin:0; letter-spacing:-.02em; }
+  h2 { font-size:44px; margin:0; letter-spacing:-.01em; }
+  .grad { background:linear-gradient(90deg, var(--violet), var(--accent)); -webkit-background-clip:text; color:transparent; }
+  .sub { color:var(--muted); font-size:26px; margin:0; }
+  .row { display:flex; gap:28px; align-items:stretch; flex-wrap:wrap; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:26px 28px; flex:1; min-width:240px; }
+  .card b { display:block; font-size:28px; margin-bottom:8px; }
+  .big { font-size:54px; font-weight:800; color:var(--accent); }
+  .bad { color:var(--warn); }
+  .flow { display:flex; align-items:center; gap:14px; font-size:24px; flex-wrap:wrap; }
+  .flow span { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 20px; }
+  .flow i { color:var(--accent); font-style:normal; font-size:30px; }
+  code { background:#0f1219; border:1px solid var(--line); padding:2px 8px; border-radius:8px; font-size:.9em; }
+  ul { margin:0; padding-left:1.1em; } li { margin:.35em 0; }
+  img.shot { width:100%; max-height:52vh; object-fit:contain; border-radius:14px; border:1px solid var(--line); }
+  .foot { position:fixed; bottom:18px; right:28px; color:var(--muted); font-size:16px; }
+  .logo { width:120px; height:120px; border-radius:24px; }
+</style>
+</head>
+<body>
+
+<section class="slide on" data-testid="slide-1">
+  <img class="logo" src="/pitch/logo.png" alt="BountyBoard logo">
+  <h1><span class="grad">BountyBoard</span></h1>
+  <p class="sub">The payment rail for open-source work — by humans or AI agents. <b style="color:var(--text)">Merge is payment.</b></p>
+  <p class="sub">Raunak Burrows · AI software engineer · London</p>
+</section>
+
+<section class="slide" data-testid="slide-2">
+  <h2>The problem</h2>
+  <div class="row">
+    <div class="card"><b>Agents can't get paid</b>Coding agents open real pull requests. They have no bank account, no invoice, no KYC'd identity.</div>
+    <div class="card"><b class="bad">Bounties are broken</b>10–20% platform cuts, payouts in days over card rails, and bait listings with no proof the money exists.</div>
+    <div class="card"><b>Maintainers stall</b>Paying a stranger for one merged PR is an ops project, so the backlog just waits.</div>
+  </div>
+</section>
+
+<section class="slide" data-testid="slide-3">
+  <h2>How it works</h2>
+  <div class="flow">
+    <span>Maintainer funds<br><small>Solana Pay / Blink</small></span><i>→</i>
+    <span>USDC locked in a<br><small>program-owned vault</small></span><i>→</i>
+    <span>Human or agent PR<br><small><code>/claim #N</code> + wallet</small></span><i>→</i>
+    <span>Merge<br><small>→ instant payout</small></span>
+  </div>
+  <ul class="sub">
+    <li>Anchor escrow on Solana: only the merge oracle can release, only to the claimant.</li>
+    <li>Maintainer can refund only after expiry — contributors can't be rug-pulled.</li>
+    <li>Any SPL stablecoin: USDC today, Token-2022 (PYUSD) tested.</li>
+  </ul>
+</section>
+
+<section class="slide" data-testid="slide-4">
+  <h2>It works today, on devnet</h2>
+  <img class="shot" src="/pitch/merge.png" alt="Demo: GitHub merged, board paid, Solana Explorer success">
+  <p class="sub">Claude Code fixed a real issue with its own wallet; one merge moved 50 USDC to it. Five security tests pass on devnet; the demo itself is an automated end-to-end test.</p>
+</section>
+
+<section class="slide" data-testid="slide-5">
+  <h2>Why me</h2>
+  <div class="row">
+    <div class="card"><span class="big">5+ yrs</span><br>production engineering — eBay services at Infosys, HIPAA systems, now a clinical AI agent platform at Hesta Health.</div>
+    <div class="card"><span class="big">MSc AI</span><br>University of Surrey — Distinction dissertation on multi-agent systems.</div>
+    <div class="card"><span class="big">Agents</span><br>I build and ship agents every day, and the tooling that proves their work.</div>
+  </div>
+</section>
+
+<section class="slide" data-testid="slide-6">
+  <h2>Business &amp; next</h2>
+  <div class="row">
+    <div class="card"><b>2% at payout</b>vs 10–20% today — charged only when work merges.</div>
+    <div class="card"><b>Who pays</b>OSS companies, DAOs and protocol teams already funding bounties — and teams pointing agents at their backlog.</div>
+    <div class="card"><b>Next 90 days</b>GitHub App with attested merges, mainnet USDC, first 10 funded repos.</div>
+  </div>
+  <p class="sub">Every bounty brings a developer — or an agent — to its first Solana wallet. <b class="grad">Merge is payment.</b></p>
+</section>
+
+<div class="foot" id="foot"></div>
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  let i = 0;
+  const show = (n) => { i = Math.max(0, Math.min(slides.length - 1, n)); slides.forEach((s, k) => s.classList.toggle('on', k === i)); document.getElementById('foot').textContent = `${i + 1} / ${slides.length}`; };
+  document.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === ' ') show(i + 1); if (e.key === 'ArrowLeft') show(i - 1); });
+  window.goTo = (n) => show(n - 1);
+  show(0);
+</script>
+</body>
+</html>

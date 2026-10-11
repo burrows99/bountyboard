@@ -1,0 +1,17 @@
+# Render Blueprint: one free Docker web service running the board against Solana devnet.
+# Secrets (sync: false) are entered in the Render dashboard, never committed.
+services:
+  - type: web
+    name: bountyboard
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/bounties
+    envVars:
+      - key: RPC_URL
+        value: https://api.devnet.solana.com
+      - key: MINT
+        value: 9AFoxzjUgwDfm49xNf34eDpSZd5huTM1Zsz4A5hWwKZ3
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: KEYPAIR_ORACLE
+        sync: false

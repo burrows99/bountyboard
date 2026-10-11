@@ -4,6 +4,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { PublicKey } from '@solana/web3.js';
+import { getOrCreateAssociatedTokenAccount, mintTo } from '@solana/spl-token';
 import { encodeURL } from '@solana/pay';
 import { createActionHeaders } from '@solana/actions';
 import { CLUSTER, DATA, connection, explorer, keypair, mint } from './solana.ts';
@@ -18,13 +19,15 @@ type Bounty = {
 
 const STORE = `${DATA}bounties-${CLUSTER}.json`;
 const PORT = Number(process.env.PORT ?? 4545);
-const PUBLIC_URL = process.env.PUBLIC_URL ?? `http://localhost:${PORT}`;
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN ?? execSync('gh auth token').toString().trim();
+const PUBLIC_URL = process.env.PUBLIC_URL ?? process.env.RENDER_EXTERNAL_URL ?? `http://localhost:${PORT}`;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || execSync('gh auth token').toString().trim();
 const BOUNTY_DAYS = Number(process.env.BOUNTY_DAYS ?? 30);
 const escrow = new Escrow(keypair('oracle'), mint());
 // Solana Actions (Blinks) and Solana Pay transaction requests share one endpoint: same POST shape.
 const ACTION_HEADERS = createActionHeaders({ chainId: CLUSTER === 'devnet' ? 'devnet' : 'mainnet', actionVersion: '2.4' });
 const actionUrl = (b: Bounty) => `${PUBLIC_URL}/api/pay/${b.id}`;
+// Devnet only: hand out test-USDC (the oracle is the mint authority) so anyone can try funding a bounty.
+const fauceted = new Set<string>(); // ponytail: in-memory, one drip per wallet per process; fine for a devnet demo
 
 const load = (): Bounty[] => (existsSync(STORE) ? JSON.parse(readFileSync(STORE, 'utf8')) : []);
 const save = (b: Bounty[]) => writeFileSync(STORE, JSON.stringify(b, null, 2));
@@ -107,6 +110,14 @@ createServer(async (req, res) => {
       save(bounties);
       return json(201, view(b));
     }
+    if (req.method === 'POST' && url.pathname === '/api/faucet' && CLUSTER === 'devnet') {
+      const wallet = new PublicKey((await body(req)).wallet); // throws → 500 on a bad address
+      if (fauceted.has(wallet.toBase58())) return json(429, { error: 'this wallet already got test USDC' });
+      fauceted.add(wallet.toBase58());
+      const ata = await getOrCreateAssociatedTokenAccount(connection, escrow.oracle, escrow.mint, wallet);
+      const sig = await mintTo(connection, escrow.oracle, escrow.mint, ata.address, escrow.oracle, 100_000_000);
+      return json(200, { amount: 100, tx: explorer(sig) });
+    }
     // Solana Pay transaction request: the wallet GETs a label, then POSTs its account and signs what we return.
     const pay = /^\/api\/pay\/([\w-]+)$/.exec(url.pathname);
     if (pay) {
@@ -124,6 +135,12 @@ createServer(async (req, res) => {
       const transaction = await escrow.fundTransaction(maintainer, BigInt(b.chainId), b.amount, b.expiresAt);
       return json(200, { type: 'transaction', transaction, message: `Escrow ${b.amount} USDC for ${b.repo}#${b.issue}` });
     }
+    // The pitch deck and its images (public/pitch/).
+    const pitch = /^\/pitch(?:\/([\w-]+\.png))?$/.exec(url.pathname);
+    if (req.method === 'GET' && pitch)
+      return pitch[1]
+        ? res.writeHead(200, { 'content-type': 'image/png' }).end(readFileSync(new URL(`../public/pitch/${pitch[1]}`, import.meta.url)))
+        : res.writeHead(200, { 'content-type': 'text/html' }).end(readFileSync(new URL('../public/pitch/index.html', import.meta.url)));
     if (req.method === 'GET' && url.pathname === '/logo.png')
       return res.writeHead(200, { 'content-type': 'image/png' }).end(readFileSync(new URL('../assets/logo.png', import.meta.url)));
     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/index.html' || url.pathname.startsWith('/fund/')))

@@ -48,6 +48,16 @@
     </ol>
   </div>
 
+  <div class="card">
+    <b>Try it on devnet</b>
+    <p class="muted">Switch your wallet (e.g. Phantom) to devnet, get 100 test USDC here, then fund a bounty by scanning its QR code or opening its Blink.</p>
+    <form id="faucet" style="grid-template-columns: 1fr auto">
+      <input name="wallet" placeholder="Your devnet wallet address" required aria-label="Wallet address">
+      <button>Get 100 test USDC</button>
+    </form>
+    <p id="faucet-out" class="muted" role="status"></p>
+  </div>
+
   <p id="err" role="alert" style="color:var(--warn)"></p>
   <div id="list"></div>
 </main>
@@ -89,6 +99,14 @@ document.getElementById('new').onsubmit = async (e) => {
   if (!res.ok) return (document.getElementById('err').textContent = (await res.json()).error);
   e.target.reset();
   render();
+};
+document.getElementById('faucet').onsubmit = async (e) => {
+  e.preventDefault();
+  const out = document.getElementById('faucet-out');
+  out.textContent = 'Minting…';
+  const res = await fetch('/api/faucet', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+  const r = await res.json();
+  out.innerHTML = res.ok ? `✅ Sent ${r.amount} test USDC · <a href="${r.tx}" target="_blank">tx</a>` : (r.error ?? 'failed');
 };
 render();
 setInterval(render, 2000);
