@@ -4,6 +4,10 @@
 
 Built for Colosseum's Crypto World's Fair (Solana).
 
+https://github.com/user-attachments/assets/220cc47a-0e78-4e60-8cf7-514f8f043d63
+
+*77 s, narrated. Fund with Solana Pay → claim in a PR → maintainer merges → USDC lands in the contributor's wallet (0 → 50, read from chain).*
+
 ## Why
 
 Open-source bounty platforms take a 10–20% cut, pay out days later through card rails that don't reach half the world, and are now flooded with bait listings whose money never existed. BountyBoard makes the money provable up front (it sits in escrow, visible on-chain) and the payout automatic (the maintainer's merge is the only approval).
@@ -31,7 +35,7 @@ npm run pay -- "<solana: pay url>"                    # pay a bounty from the ma
 
 ## Demo
 
-The demo video is recorded end to end by [alexander](.alexander/claims/demo/bounty-paid-on-merge.claim.ts) against the real stack: a real GitHub issue and PR on [`burrows99/bountyboard-demo`](https://github.com/burrows99/bountyboard-demo), real Solana transactions, and the contributor's balance read back from the chain (0 → 50).
+The video above ([also on issue #1](https://github.com/burrows99/bountyboard/issues/1)) is recorded end to end by [alexander](.alexander/claims/demo/bounty-paid-on-merge.claim.ts) against the real stack: a real GitHub issue and PR on [`burrows99/bountyboard-demo`](https://github.com/burrows99/bountyboard-demo), real Solana transactions, and the contributor's balance read back from the chain (0 → 50).
 
 ## Known limits (hackathon scope)
 
