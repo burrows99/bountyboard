@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BountyBoard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root { --bg:#0b0d12; --card:#151924; --line:#262c3b; --text:#e8ebf2; --muted:#8a93a6; --accent:#14f195; --violet:#9945ff; --warn:#f5b84b; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, -apple-system, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { margin:0; font-size: 28px; letter-spacing:-.02em; }
+  h1 span { background: linear-gradient(90deg, var(--violet), var(--accent)); -webkit-background-clip:text; color:transparent; }
+  .tag { color:var(--muted); margin:4px 0 28px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:16px; }
+  form { display:grid; grid-template-columns: 2fr 1fr 1fr auto; gap:10px; }
+  @media (max-width:640px){ form { grid-template-columns:1fr; } }
+  input, button { font:inherit; border-radius:10px; padding:10px 12px; border:1px solid var(--line); background:#0f1219; color:var(--text); }
+  button { background: var(--accent); color:#04120b; font-weight:600; border:0; cursor:pointer; }
+  .row { display:flex; gap:16px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; }
+  .amt { font-size:22px; font-weight:700; }
+  .status { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; padding:4px 10px; border-radius:99px; }
+  .funding { background:#3a2c10; color:var(--warn); } .open { background:#10283a; color:#6cc4ff; }
+  .paying { background:#2a1840; color:#c79bff; } .paid { background:#0c2e20; color:var(--accent); }
+  a { color:#6cc4ff; } .muted { color:var(--muted); font-size:13px; }
+  .qr { background:#fff; padding:8px; border-radius:8px; }
+  ol { margin:8px 0 0; padding-left:18px; color:var(--muted); }
+  code { background:#0f1219; padding:1px 6px; border-radius:6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1><span>BountyBoard</span></h1>
+  <p class="tag">Escrow USDC on a GitHub issue. It pays out on-chain the moment the claiming PR is merged — no platform, no invoice, no waiting.</p>
+
+  <div class="card">
+    <form id="new">
+      <input name="repo" placeholder="owner/repo" required aria-label="Repository">
+      <input name="issue" type="number" min="1" placeholder="Issue #" required aria-label="Issue number">
+      <input name="amount" type="number" min="0.01" step="0.01" placeholder="USDC" required aria-label="Amount in USDC">
+      <button>Post bounty</button>
+    </form>
+    <ol>
+      <li>Post a bounty and fund it with Solana Pay — USDC goes to escrow.</li>
+      <li>A contributor opens a PR with <code>/claim #N</code> and <code>wallet: &lt;address&gt;</code>.</li>
+      <li>You merge. Escrow releases to their wallet automatically.</li>
+    </ol>
+  </div>
+
+  <p id="err" role="alert" style="color:var(--warn)"></p>
+  <div id="list"></div>
+</main>
+<script>
+const list = document.getElementById('list');
+const qrs = {};
+async function render() {
+  const bounties = await (await fetch('/api/bounties')).json();
+  list.innerHTML = bounties.slice().reverse().map(b => `
+    <div class="card" data-testid="bounty" data-status="${b.status}">
+      <div class="row">
+        <div>
+          <div class="amt">${b.amount} USDC</div>
+          <a href="https://github.com/${b.repo}/issues/${b.issue}" target="_blank">${b.repo}#${b.issue}</a>
+        </div>
+        <span class="status ${b.status}">${b.status}</span>
+      </div>
+      ${b.status === 'funding' ? `
+        <div class="row" style="margin-top:14px">
+          <div class="muted">Scan with a Solana wallet, or <a href="${b.payUrl}" data-testid="pay-url">open in wallet</a>.<br>Watching the chain for the deposit…</div>
+          <div class="qr" id="qr-${b.id}"></div>
+        </div>` : ''}
+      ${b.fundTx ? `<p class="muted">Escrowed · <a href="${b.fundTx}" target="_blank" data-testid="fund-tx">deposit tx</a></p>` : ''}
+      ${b.pr ? `<p class="muted">Claimed by <b>@${b.contributor}</b> via <a href="${b.pr}" target="_blank">merged PR</a> → <code>${b.wallet.slice(0,4)}…${b.wallet.slice(-4)}</code></p>` : ''}
+      ${b.payoutTx ? `<p class="muted">✅ Paid · <a href="${b.payoutTx}" target="_blank" data-testid="payout-tx">payout tx</a></p>` : ''}
+    </div>`).join('');
+  for (const b of bounties) {
+    const el = document.getElementById('qr-' + b.id);
+    if (el && window.QRCode) new QRCode(el, { text: b.payUrl, width: 128, height: 128 });
+  }
+}
+document.getElementById('new').onsubmit = async (e) => {
+  e.preventDefault();
+  const res = await fetch('/api/bounties', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+  if (!res.ok) return (document.getElementById('err').textContent = (await res.json()).error);
+  e.target.reset();
+  render();
+};
+render();
+setInterval(render, 2000);
+</script>
+</body>
+</html>
