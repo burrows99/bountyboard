@@ -11,7 +11,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@solana/pay": "^0.2.6",
     "@solana/spl-token": "^0.4.13",
@@ -19,6 +19,7 @@
     "bignumber.js": "^9.3.1"
   },
   "devDependencies": {
+    "@burrows99/alexander": "github:burrows99/alexander#0.20.0",
     "@types/node": "^22.20.5",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
