@@ -13,10 +13,14 @@ export function keypair(name: string): Keypair {
   return Keypair.fromSecretKey(Uint8Array.from(JSON.parse(readFileSync(file, 'utf8'))));
 }
 
+// Each cluster has its own test-USDC mint and bounty store; keypairs are shared.
+export const CLUSTER = process.env.RPC_URL?.includes('devnet') ? 'devnet' : process.env.RPC_URL ? 'local' : 'devnet';
+export const MINT_FILE = `${DATA}mint-${CLUSTER}.txt`;
+
 export function mint(): PublicKey {
-  return new PublicKey(readFileSync(`${DATA}mint.txt`, 'utf8').trim());
+  return new PublicKey(readFileSync(MINT_FILE, 'utf8').trim());
 }
 
 const rpc = process.env.RPC_URL;
-export const explorer = (sig: string) =>
-  `https://explorer.solana.com/tx/${sig}?cluster=${rpc ? `custom&customUrl=${encodeURIComponent(rpc)}` : 'devnet'}`;
+export const explorer = (id: string, kind: 'tx' | 'address' = 'tx') =>
+  `https://explorer.solana.com/${kind}/${id}?cluster=${rpc ? `custom&customUrl=${encodeURIComponent(rpc)}` : 'devnet'}`;

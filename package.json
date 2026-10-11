@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "tsx scripts/test-escrow.ts",
     "start": "tsx src/server.ts",
     "setup": "tsx scripts/setup-devnet.ts",
     "pay": "tsx scripts/pay.ts"
@@ -13,6 +13,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@anchor-lang/core": "^1.0.2",
     "@solana/pay": "^0.2.6",
     "@solana/spl-token": "^0.4.13",
     "@solana/web3.js": "^1.98.4",

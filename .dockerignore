@@ -1,0 +1,8 @@
+node_modules
+.data
+.alexander
+test-ledger
+program/target/deploy
+program/target/release
+program/target/sbpf*
+.git

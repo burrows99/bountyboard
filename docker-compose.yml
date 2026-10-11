@@ -1,0 +1,27 @@
+# BountyBoard: `docker compose run --rm program` builds the on-chain escrow with the
+# Solana Foundation's Anchor image; `docker compose up app` serves the board.
+services:
+  program:
+    image: solanafoundation/anchor:v1.0.2
+    platform: linux/amd64 # the official image is amd64-only; runs emulated on Apple silicon
+    working_dir: /work
+    volumes:
+      - ./program:/work
+      - cargo-registry:/root/.cargo/registry
+    command: anchor build
+    profiles: [build]
+
+  app:
+    build: .
+    ports:
+      - "${PORT:-4545}:4545"
+    environment:
+      RPC_URL: ${RPC_URL:-https://api.devnet.solana.com}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:4545}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:?set GITHUB_TOKEN (a token that can read the repos you post bounties on)}
+    volumes:
+      - ./.data:/app/.data # oracle + maintainer keypairs, mint address, bounty store
+    restart: unless-stopped
+
+volumes:
+  cargo-registry:
