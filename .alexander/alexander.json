@@ -8,21 +8,26 @@
     {
       "name": "chain",
       "kind": "http",
-      "url": "http://127.0.0.1:8899",
-      "health": "/health",
-      "start": "/Users/raunakburrows/.local/share/solana/install/active_release/bin/solana-test-validator --quiet --ledger test-ledger"
+      "url": "https://api.devnet.solana.com",
+      "health": "/health"
     },
     {
       "name": "web",
       "kind": "browser",
       "url": "http://localhost:4545",
       "viewport": "desktop",
-      "start": "RPC_URL=http://127.0.0.1:8899 npx tsx src/server.ts"
+      "start": "RPC_URL=https://api.devnet.solana.com npx tsx src/server.ts"
     },
     {
       "name": "github",
       "kind": "browser",
       "url": "https://github.com",
+      "viewport": "desktop"
+    },
+    {
+      "name": "explorer",
+      "kind": "browser",
+      "url": "https://explorer.solana.com",
       "viewport": "desktop"
     }
   ]

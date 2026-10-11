@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import anchor from '@anchor-lang/core';
 import { Keypair, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID, createMint, getAssociatedTokenAddressSync, getOrCreateAssociatedTokenAccount, mintTo } from '@solana/spl-token';
 import { connection, keypair, mint } from '../src/solana.ts';
 import { Escrow } from '../src/escrow.ts';
 
@@ -59,3 +59,21 @@ await new Promise((r) => setTimeout(r, 4000));
 await refund(b2);
 assert.equal(await balance(maintainer.publicKey), before);
 console.log('✓ maintainer is refunded after expiry');
+
+// 5. Any stablecoin: a Token-2022 mint (the program PYUSD-style tokens use) escrows and pays out the same way.
+{
+  const oracle = keypair('oracle');
+  const m22 = await createMint(connection, maintainer, maintainer.publicKey, null, 6, undefined, undefined, TOKEN_2022_PROGRAM_ID);
+  const src = await getOrCreateAssociatedTokenAccount(connection, maintainer, m22, maintainer.publicKey, false, undefined, undefined, TOKEN_2022_PROGRAM_ID);
+  await mintTo(connection, maintainer, m22, src.address, maintainer, 7_000_000, [], undefined, TOKEN_2022_PROGRAM_ID);
+  const e22 = new Escrow(oracle, m22, TOKEN_2022_PROGRAM_ID);
+  const id = randomBytes(8).readBigUInt64LE();
+  const tx = Transaction.from(Buffer.from(await e22.fundTransaction(maintainer.publicKey, id, 7, Math.floor(Date.now() / 1000) + 3600), 'base64'));
+  tx.partialSign(maintainer);
+  await connection.confirmTransaction(await connection.sendRawTransaction(tx.serialize()), 'confirmed');
+  const agent = Keypair.generate().publicKey;
+  await e22.release(maintainer.publicKey, e22.bountyAddress(maintainer.publicKey, id), agent);
+  const got = await connection.getTokenAccountBalance(getAssociatedTokenAddressSync(m22, agent, false, TOKEN_2022_PROGRAM_ID));
+  assert.equal(got.value.uiAmount, 7);
+  console.log('✓ a Token-2022 stablecoin escrows and pays out 7');
+}

@@ -1,56 +1,75 @@
 # BountyBoard
 
-**Merge is payment.** Escrow USDC on a GitHub issue; it's released on-chain to the contributor's wallet the moment their claiming PR merges. No platform account, no invoice, no payout queue.
+**The payment rail for open-source work — by humans or AI agents. Merge is payment.**
+
+Coding agents now open real pull requests. They can't hold a bank account, but they can hold a Solana wallet. BountyBoard lets a maintainer lock stablecoins against a GitHub issue in an on-chain escrow program; whoever's PR closes it — a person or an agent — is paid the moment it merges.
 
 Built for Colosseum's Crypto World's Fair (Solana).
 
-https://github.com/user-attachments/assets/220cc47a-0e78-4e60-8cf7-514f8f043d63
+https://github.com/user-attachments/assets/239e7d8e-a857-40d5-afcd-f8ba96172ad8
 
-*77 s, narrated. Fund with Solana Pay → claim in a PR → maintainer merges → USDC lands in the contributor's wallet (0 → 50, read from chain).*
+*2:20, narrated, on **Solana devnet**: a maintainer escrows 50 USDC → **Claude Code, running headless with its own wallet, fixes the issue and opens the PR** → the maintainer merges → the program pays the agent. GitHub, the board and Solana Explorer are on screen together, and every wallet's balance is read from chain at each step (maintainer −50, vault 0 → 50 → closed, agent 0 → 50).*
 
 ## Why
 
-Open-source bounty platforms take a 10–20% cut, pay out days later through card rails that don't reach half the world, and are now flooded with bait listings whose money never existed. BountyBoard makes the money provable up front (it sits in escrow, visible on-chain) and the payout automatic (the maintainer's merge is the only approval).
-
-## Business
-
-- **Who pays:** open-source companies and DAOs that already fund bounties (Algora, Opire, Superteam Earn, Gitcoin grants) — plus any maintainer with a backlog and a wallet.
-- **Revenue:** a 2% fee taken at payout (vs. 10–20% on today's platforms), charged only when work is merged — the maintainer never pays for an unclaimed bounty. Later: a hosted GitHub App with private-repo support and team budgets as a subscription.
-- **Why it wins:** funds are provably escrowed before anyone starts work (no bait bounties), payout is instant and global (a Solana wallet works anywhere a bank or Stripe doesn't), and there's no account to make — a GitHub PR and a wallet address are the whole onboarding.
-- **For Solana:** every bounty brings a developer to their first wallet and first USDC on Solana, paid for real work.
-- **Next:** an Anchor escrow program (one PDA per bounty, no custody), a GitHub App + webhook instead of polling, split payouts for co-authored PRs, and refunds on expiry.
+Bounty platforms take 10–20%, pay out days later on card rails that don't reach half the world, and are full of bait listings whose money never existed — and none of them can pay an AI agent at all. BountyBoard makes the money **provable before work starts** (it sits in a program-owned vault, visible on Explorer) and the payout **instant, global and agent-native** (a wallet address in the PR is the whole onboarding).
 
 ## How it works
 
-1. **Fund** — the maintainer posts `owner/repo#issue` + amount. BountyBoard returns a [Solana Pay](https://docs.solanapay.com) transfer request (QR / wallet link) with a unique `reference` key. Any Solana wallet pays it.
-2. **Verify** — the server finds the deposit by its reference (`findReference`) and checks amount, mint and recipient (`validateTransfer`). The bounty goes `funding → open`.
-3. **Claim** — a contributor opens a PR whose body contains:
-   ```
-   /claim #12
-   wallet: <solana address>
-   ```
-4. **Merge = payout** — when that PR is merged, BountyBoard transfers the escrowed USDC to the wallet (`open → paid`) and links both transactions.
+1. **Fund** — the maintainer posts `owner/repo#issue` + amount and signs a `fund_bounty` transaction, served as a **Solana Pay transaction request** that is also a **Solana Action (Blink)** — fund from any wallet, or straight from a post on X.
+2. **Escrow** — the [`bounty_escrow`](program/programs/bounty_escrow/src) program moves the tokens into a vault owned by a per-bounty PDA. Only two exits exist:
+   - `release` — callable only by the merge oracle, pays the **whole** vault to the contributor and closes it;
+   - `refund` — callable only by the maintainer, and only **after expiry** (default 30 days), so contributors can't be rug-pulled mid-work.
+3. **Claim** — the contributor's PR body contains `/claim #N` and `wallet: <address>`.
+4. **Merge = payout** — when that PR merges (and only a PR merged *after* the bounty was posted), the oracle calls `release`.
+
+Works with any SPL stablecoin — classic Token (USDC) and Token-2022 (e.g. PYUSD) — tested both.
+
+**Devnet program:** [`76YvPrU9L4wwy5c4zWAMZV3cXu9WMazB55NeJ9nym3o`](https://explorer.solana.com/address/76YvPrU9L4wwy5c4zWAMZV3cXu9WMazB55NeJ9nym3o?cluster=devnet)
+
+## Tested guarantees
+
+`npm test` runs against a live cluster (local validator or devnet) and passes on both:
+
+```
+✓ a key that is not the oracle cannot release
+✓ maintainer cannot refund before expiry
+✓ release pays the contributor 10 and closes the bounty
+✓ maintainer is refunded after expiry
+✓ a Token-2022 stablecoin escrows and pays out 7
+```
+
+The demo video is itself an automated end-to-end test ([spec](.alexander/claims/demo/bounty-paid-on-merge.claim.ts), recorded with alexander): it fails if any balance moves by the wrong amount, if money moves before the merge, or if the agent doesn't open a PR.
+
+## Business
+
+- **Who pays:** OSS companies, DAOs and protocol teams already funding bounties and grants — and, increasingly, teams dispatching AI agents at their backlog.
+- **Revenue:** 2% taken at payout (vs 10–20% today), only when work merges. Later: a hosted GitHub App (webhooks, org budgets, private repos) on subscription.
+- **Why now:** agents are starting to do paid work and need a payment rail that doesn't require a bank or KYC'd human; stablecoins on Solana make a seconds-fast, sub-cent global payout trivial.
+- **For Solana:** every bounty brings a developer — or an agent — to its first wallet and first USDC, paid for real work.
 
 ## Run it
 
 ```sh
-npm install
-solana-test-validator --quiet --ledger test-ledger   # or RPC_URL=<devnet rpc>
-RPC_URL=http://127.0.0.1:8899 npm run setup          # escrow + maintainer wallets, a test-USDC mint
-RPC_URL=http://127.0.0.1:8899 npm start               # http://localhost:4545 (uses `gh auth token` or GITHUB_TOKEN)
-npm run pay -- "<solana: pay url>"                    # pay a bounty from the maintainer wallet (stands in for a phone wallet)
+# build the program with the Solana Foundation's Anchor image
+docker compose run --rm program
+
+# run the board against devnet (a GitHub token that can read your repos)
+GITHUB_TOKEN=... docker compose up app        # http://localhost:4545
 ```
 
-## Demo
+Or natively: `npm install`, `RPC_URL=https://api.devnet.solana.com npm run setup` (wallets + a test-USDC mint), `npm start`, `npm test`.
 
-The video above ([also on issue #1](https://github.com/burrows99/bountyboard/issues/1)) is recorded end to end by [alexander](.alexander/claims/demo/bounty-paid-on-merge.claim.ts) against the real stack: a real GitHub issue and PR on [`burrows99/bountyboard-demo`](https://github.com/burrows99/bountyboard-demo), real Solana transactions, and the contributor's balance read back from the chain (0 → 50).
+## Built from
+
+- Escrow program adapted from the Solana Foundation's [`program-examples/tokens/escrow/anchor`](https://github.com/solana-developers/program-examples/tree/main/tokens/escrow/anchor) (Anchor 1.0.2).
+- Official clients only: `@anchor-lang/core`, `@solana/web3.js`, `@solana/spl-token`, `@solana/pay`, `@solana/actions`.
 
 ## Known limits (hackathon scope)
 
-- **Custodial escrow.** Funds sit in a server-held keypair. Next: an Anchor program holding each bounty in a PDA, released by a GitHub-attested merge.
-- **Polling, not webhooks.** The server polls GitHub every 3s; a webhook is the production path.
-- **Test-USDC on a local validator / devnet.** Swap the mint for real USDC on mainnet.
-- The maintainer's merge is the authorization: anyone can claim, but only a merged PR pays.
+- **The oracle is trusted to report merges honestly.** It can only send funds to a claimant, never back to itself; next step is a GitHub App webhook plus an attestation (e.g. signed merge event) the program verifies.
+- **Polling, not webhooks** (3 s) for now.
+- **Test-USDC on devnet.** Swap the mint for real USDC/PYUSD on mainnet.
 
 ## License
 

@@ -10,8 +10,15 @@ const { BN } = anchor;
 
 export class Escrow {
   readonly program: anchor.Program;
+  readonly oracle: Keypair;
+  readonly mint: PublicKey;
+  readonly tokenProgram: PublicKey;
 
-  constructor(readonly oracle: Keypair, readonly mint: PublicKey) {
+  // tokenProgram: classic SPL Token (USDC) or Token-2022 (e.g. PYUSD); the program accepts either.
+  constructor(oracle: Keypair, mint: PublicKey, tokenProgram: PublicKey = TOKEN_PROGRAM_ID) {
+    this.oracle = oracle;
+    this.mint = mint;
+    this.tokenProgram = tokenProgram;
     const provider = new anchor.AnchorProvider(connection, new anchor.Wallet(oracle), { commitment: 'confirmed' });
     this.program = new anchor.Program(IDL, provider);
   }
@@ -23,14 +30,14 @@ export class Escrow {
   }
 
   vaultAddress(bounty: PublicKey) {
-    return getAssociatedTokenAddressSync(this.mint, bounty, true);
+    return getAssociatedTokenAddressSync(this.mint, bounty, true, this.tokenProgram);
   }
 
   /** The unsigned `fund_bounty` transaction a Solana Pay transaction request hands the maintainer's wallet. */
   async fundTransaction(maintainer: PublicKey, id: bigint, amount: number, expiresAt: number) {
     const ix = await this.program.methods
       .fundBounty(new BN(id.toString()), new BN(Math.round(amount * 10 ** DECIMALS)), new BN(expiresAt))
-      .accounts({ maintainer, oracle: this.oracle.publicKey, mint: this.mint, tokenProgram: TOKEN_PROGRAM_ID })
+      .accounts({ maintainer, oracle: this.oracle.publicKey, mint: this.mint, tokenProgram: this.tokenProgram })
       .instruction();
     const tx = new Transaction({ feePayer: maintainer, ...(await connection.getLatestBlockhash()) }).add(ix);
     return tx.serialize({ requireAllSignatures: false }).toString('base64');
@@ -47,7 +54,7 @@ export class Escrow {
       .release()
       .accountsPartial({
         oracle: this.oracle.publicKey, contributor, maintainer, mint: this.mint, bounty,
-        vault: this.vaultAddress(bounty), tokenProgram: TOKEN_PROGRAM_ID,
+        vault: this.vaultAddress(bounty), tokenProgram: this.tokenProgram,
       })
       .rpc();
   }

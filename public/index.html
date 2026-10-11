@@ -32,7 +32,7 @@
 <body>
 <main>
   <h1><span>BountyBoard</span></h1>
-  <p class="tag">Escrow USDC on a GitHub issue. It pays out on-chain the moment the claiming PR is merged — no platform, no invoice, no waiting.</p>
+  <p class="tag">The payment rail for open-source work — by humans or AI agents. Escrow stablecoins on a GitHub issue in a Solana program; it pays out on-chain the moment the claiming PR is merged.</p>
 
   <div class="card">
     <form id="new">
@@ -42,9 +42,9 @@
       <button>Post bounty</button>
     </form>
     <ol>
-      <li>Post a bounty and fund it with Solana Pay — USDC goes to escrow.</li>
-      <li>A contributor opens a PR with <code>/claim #N</code> and <code>wallet: &lt;address&gt;</code>.</li>
-      <li>You merge. Escrow releases to their wallet automatically.</li>
+      <li>Post a bounty and fund it with Solana Pay or a Blink — USDC is locked in an on-chain escrow.</li>
+      <li>A contributor — person or coding agent — opens a PR with <code>/claim #N</code> and <code>wallet: &lt;address&gt;</code>.</li>
+      <li>You merge. The program releases the escrow to their wallet. Unclaimed? Refundable after expiry.</li>
     </ol>
   </div>
 
@@ -54,8 +54,12 @@
 <script>
 const list = document.getElementById('list');
 const qrs = {};
+let last = '';
 async function render() {
-  const bounties = await (await fetch('/api/bounties')).json();
+  const raw = await (await fetch('/api/bounties')).text();
+  if (raw === last) return; // only rebuild when something changed, so links don't vanish under the cursor
+  last = raw;
+  const bounties = JSON.parse(raw);
   list.innerHTML = bounties.slice().reverse().map(b => `
     <div class="card" data-testid="bounty" data-status="${b.status}">
       <div class="row">
@@ -67,10 +71,10 @@ async function render() {
       </div>
       ${b.status === 'funding' ? `
         <div class="row" style="margin-top:14px">
-          <div class="muted">Scan with a Solana wallet, or <a href="${b.payUrl}" data-testid="pay-url">open in wallet</a>.<br>Watching the chain for the deposit…</div>
+          <div class="muted">Scan with a Solana wallet, <a href="${b.payUrl}" data-testid="pay-url">open in wallet</a>, or <a href="${b.blinkUrl}" target="_blank" data-testid="blink-url">share as a Blink</a>.<br>Watching the chain for the deposit…</div>
           <div class="qr" id="qr-${b.id}"></div>
         </div>` : ''}
-      ${b.fundTx ? `<p class="muted">Escrowed · <a href="${b.fundTx}" target="_blank" data-testid="fund-tx">deposit tx</a></p>` : ''}
+      ${b.fundTx ? `<p class="muted">🔒 Locked in the escrow program · <a href="${b.escrowAccount}" target="_blank" data-testid="escrow-account">escrow account</a> · <a href="${b.fundTx}" target="_blank" data-testid="fund-tx">deposit tx</a> · refundable after ${new Date(b.expiresAt * 1000).toDateString()}</p>` : ''}
       ${b.pr ? `<p class="muted">Claimed by <b>@${b.contributor}</b> via <a href="${b.pr}" target="_blank">merged PR</a> → <code>${b.wallet.slice(0,4)}…${b.wallet.slice(-4)}</code></p>` : ''}
       ${b.payoutTx ? `<p class="muted">✅ Paid · <a href="${b.payoutTx}" target="_blank" data-testid="payout-tx">payout tx</a></p>` : ''}
     </div>`).join('');

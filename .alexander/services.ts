@@ -1,10 +1,11 @@
 import { HttpApi, WebApp, type Stack as Base, type Wiring } from "@burrows99/alexander";
 
-/** BountyBoard's stack: the local Solana validator, the board itself, and GitHub (your signed-in session). */
+/** BountyBoard's stack: Solana devnet, the board itself, GitHub (your signed-in session) and Solana Explorer. */
 export const services = (w: Wiring) => ({
   chain: new HttpApi("chain", w.url("chain"), "/health"),
   web: new WebApp("web", w.url("web"), w.host, w.size("web")),
   github: new WebApp("github", w.url("github"), w.host, w.size("github")),
+  explorer: new WebApp("explorer", w.url("explorer"), w.host, w.size("explorer")),
 });
 
 export type Stack = Base & ReturnType<typeof services>;
